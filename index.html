@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#075e54">
+<title>HubKita</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b141a;color:#e9edef;font-size:15px;line-height:1.4}
+button,input,textarea{font-family:inherit;font-size:inherit;color:inherit;outline:none;border:none;background:none;cursor:pointer}
+.hide{display:none!important}
+input,textarea{-webkit-appearance:none;border-radius:0}
+input::placeholder,textarea::placeholder{color:#8696a0}
+svg{display:block}
+
+#load{position:fixed;inset:0;background:#075e54;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px;transition:opacity .3s}
+#load.out{opacity:0;pointer-events:none}
+.ld-logo{width:96px;height:96px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:900;color:#075e54;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.ld-name{color:#fff;font-size:30px;font-weight:800;letter-spacing:-.5px}
+.ld-spin{width:36px;height:36px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ld-msg{color:rgba(255,255,255,.65);font-size:13px}
+
+#auth{position:fixed;inset:0;background:#075e54;overflow-y:auto;padding:30px 22px 40px;z-index:100}
+.ab{text-align:center;margin:30px 0 36px}
+.ab-c{width:100px;height:100px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:900;color:#075e54;margin:0 auto 20px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.ab-n{color:#fff;font-size:32px;font-weight:800;letter-spacing:-1px}
+.ab-t{color:rgba(255,255,255,.75);font-size:14px;margin-top:6px}
+.ab-box{background:#fff;border-radius:16px;padding:26px;color:#111b21;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.ab-h{font-size:17px;font-weight:700;color:#075e54;margin-bottom:6px}
+.ab-s{font-size:13px;color:#667781;margin-bottom:20px;line-height:1.5}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12px;font-weight:600;color:#667781;margin-bottom:6px}
+.phone-row{display:flex;gap:8px}
+.phone-prefix{padding:14px 12px;background:#f0f2f5;border-radius:10px;font-size:15px;font-weight:700;color:#075e54;display:flex;align-items:center;white-space:nowrap}
+.fld input{width:100%;padding:14px;border-radius:10px;background:#f0f2f5;color:#111b21;font-size:15px;border:2px solid transparent;transition:all .15s;font-weight:500}
+.fld input:focus{border-color:#00a884;background:#fff}
+.fld input[type=tel]{letter-spacing:2px;font-weight:600}
+.fld input.otp{letter-spacing:14px;font-size:26px;text-align:center;font-weight:800;padding-left:20px}
+.btn-main{width:100%;padding:15px;border-radius:10px;background:#00a884;color:#fff;font-size:15px;font-weight:700;transition:.15s;box-shadow:0 4px 14px rgba(0,168,132,.35)}
+.btn-main:active{transform:scale(.98)}
+.btn-main:disabled{opacity:.6}
+.btn-sec{width:100%;padding:12px;border-radius:10px;background:#f0f2f5;color:#667781;font-size:14px;font-weight:600;margin-top:10px}
+.amsg{padding:11px 13px;border-radius:8px;font-size:13px;margin-top:14px;display:none;line-height:1.5}
+.amsg.on{display:block}
+.amsg.err{background:#fee2e2;color:#991b1b;border-left:3px solid #dc2626}
+.amsg.ok{background:#d1fae5;color:#065f46;border-left:3px solid #10b981}
+.amsg.info{background:#dbeafe;color:#1e40af;border-left:3px solid #3b82f6}
+.back-link{text-align:center;margin-top:14px;font-size:13px;color:#667781;cursor:pointer}
+.demo-badge{background:#ecfdf5;border:1px solid #00a884;border-radius:8px;padding:10px 14px;font-size:12px;color:#065f46;text-align:center;margin-top:14px;line-height:1.5}
+.demo-badge b{font-family:monospace;background:#00a884;color:#fff;padding:2px 8px;border-radius:6px;letter-spacing:1px}
+.auth-info{margin-top:22px;text-align:center;font-size:12px;color:rgba(255,255,255,.7);line-height:1.7}
+
+#app{display:none;flex-direction:column;height:100vh;height:100dvh}
+#app.on{display:flex}
+.app-top{background:#075e54;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0));display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.top-t{color:#fff;font-size:20px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top-actions{display:flex;gap:4px;align-items:center}
+.top-btn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff}
+.top-btn:active{background:rgba(255,255,255,.15)}
+.top-btn svg{width:22px;height:22px;stroke-width:2}
+.top-av{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#128c7e;border:2px solid rgba(255,255,255,.3);cursor:pointer}
+
+.tv{display:none;flex:1;flex-direction:column;overflow:hidden;background:#111b21}
+.tv.on{display:flex}
+
+.search-bar{padding:8px 12px;background:#111b21;flex-shrink:0}
+.search-in{width:100%;padding:10px 18px;border-radius:10px;background:#202c33;color:#e9edef;font-size:15px;border:2px solid transparent;transition:border .15s}
+.search-in:focus{border-color:#00a884}
+
+.list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.ch-item{display:flex;gap:13px;padding:11px 16px;cursor:pointer;align-items:center}
+.ch-item:active{background:#202c33}
+.ch-av-wrap{position:relative;flex-shrink:0}
+.ch-av{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#128c7e}
+.ch-dot{position:absolute;bottom:1px;right:1px;width:14px;height:14px;border-radius:50%;border:3px solid #111b21}
+.ch-dot.on{background:#00a884}
+.ch-dot.off{background:#8696a0}
+.ch-body{flex:1;min-width:0;border-bottom:1px solid #202c33;padding-bottom:11px;margin-top:1px}
+.ch-item:last-child .ch-body{border-bottom:none}
+.ch-name{font-size:16px;font-weight:500;color:#e9edef;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.ch-prev{font-size:13.5px;color:#8696a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;display:flex;align-items:center;gap:4px}
+.ch-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px;padding-top:2px;flex-shrink:0}
+.ch-time{font-size:12px;color:#8696a0}
+.ch-badge{background:#00a884;color:#fff;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;min-width:20px;text-align:center}
+.ch-check{display:inline-flex;color:#53bdeb}
+.ch-check svg{width:16px;height:16px}
+
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;color:#8696a0;gap:14px}
+.empty-ic{width:90px;height:90px;border-radius:50%;background:#202c33;display:flex;align-items:center;justify-content:center}
+.empty-ic svg{width:44px;height:44px;color:#8696a0;stroke-width:2}
+.empty-t{font-size:16px;font-weight:600;color:#e9edef}
+.empty-s{font-size:13.5px;line-height:1.55;max-width:280px}
+
+.room-top{background:#075e54;padding:8px 10px;padding-top:calc(8px + env(safe-area-inset-top,0));display:flex;align-items:center;gap:8px;flex-shrink:0;z-index:5}
+.back{width:40px;height:40px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.back:active{background:rgba(255,255,255,.15)}
+.back svg{width:24px;height:24px;stroke-width:2}
+.room-av{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#128c7e;flex-shrink:0}
+.room-hdr{flex:1;min-width:0}
+.room-nm{font-size:16px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.room-st{font-size:12px;color:rgba(255,255,255,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;display:flex;align-items:center;gap:5px}
+.online-dot{width:7px;height:7px;border-radius:50%;background:#25d366;display:inline-block}
+.room-actions{display:flex;gap:2px}
+.room-btn{width:40px;height:40px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center}
+.room-btn:active{background:rgba(255,255,255,.15)}
+.room-btn svg{width:22px;height:22px;stroke-width:2}
+
+.msgs{flex:1;overflow-y:auto;padding:14px 12px;background:#0b141a;display:flex;flex-direction:column;gap:3px;-webkit-overflow-scrolling:touch}
+.msg{max-width:85%;padding:7px 11px 20px;border-radius:8px;font-size:15px;line-height:1.4;word-wrap:break-word;white-space:pre-wrap;word-break:break-word;position:relative;animation:mpop .18s cubic-bezier(.16,1,.3,1)}
+@keyframes mpop{from{opacity:0;transform:scale(.94) translateY(4px)}to{opacity:1;transform:none}}
+.msg.me{align-self:flex-end;background:#005c4b;border-top-right-radius:2px}
+.msg.me::after{content:'';position:absolute;top:0;right:-8px;width:0;height:0;border:8px solid transparent;border-left-color:#005c4b;border-top:0;border-right:0}
+.msg.oth{align-self:flex-start;background:#202c33;border-top-left-radius:2px}
+.msg.oth::before{content:'';position:absolute;top:0;left:-8px;width:0;height:0;border:8px solid transparent;border-right-color:#202c33;border-top:0;border-left:0}
+.msg-time{font-size:11px;color:#8696a0;position:absolute;bottom:4px;right:8px;display:flex;align-items:center;gap:3px}
+.msg.me .msg-time{color:rgba(233,237,239,.6)}
+.msg-check{display:inline-flex;color:#53bdeb}
+.msg-check svg{width:15px;height:15px;stroke-width:2.5}
+.msg-day{align-self:center;background:rgba(24,34,41,.95);color:#8696a0;font-size:12px;padding:5px 13px;border-radius:8px;margin:10px 0;backdrop-filter:blur(6px)}
+
+.input-bar{background:#111b21;padding:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0));display:flex;gap:6px;align-items:flex-end;flex-shrink:0}
+.input-w{flex:1;background:#202c33;border-radius:24px;padding:8px 10px 8px 16px;display:flex;align-items:center;gap:6px;min-height:46px}
+.input-f{flex:1;color:#e9edef;font-size:15.5px;max-height:120px;resize:none;line-height:1.35;padding:6px 0}
+.input-btn{width:36px;height:36px;border-radius:50%;color:#8696a0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.input-btn:active{background:rgba(255,255,255,.08)}
+.input-btn svg{width:22px;height:22px;stroke-width:2}
+.send-b{width:46px;height:46px;border-radius:50%;background:#00a884;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .12s;box-shadow:0 2px 8px rgba(0,168,132,.35)}
+.send-b:active{transform:scale(.9)}
+.send-b svg{width:22px;height:22px;stroke-width:2}
+
+.prof{flex:1;overflow-y:auto;background:#111b21}
+.prof-top{padding:30px 16px 24px;text-align:center;background:linear-gradient(180deg,rgba(0,168,132,.08) 0%,transparent 100%)}
+.prof-av{width:130px;height:130px;border-radius:50%;object-fit:cover;background:#128c7e;margin:0 auto 16px;border:4px solid #202c33}
+.prof-nm{font-size:24px;font-weight:700;color:#e9edef;margin-bottom:4px}
+.prof-ph{font-size:14px;color:#8696a0;font-family:monospace}
+.prof-bio{margin-top:14px;padding:12px 16px;background:#202c33;border-radius:12px;font-size:13.5px;color:#8696a0;text-align:center;max-width:340px;margin-left:auto;margin-right:auto;line-height:1.5}
+.prof-section{padding:20px 12px 8px}
+.prof-title{font-size:12px;font-weight:700;color:#8696a0;text-transform:uppercase;letter-spacing:.6px;padding:0 8px 8px}
+.prof-item{display:flex;align-items:center;gap:16px;padding:15px 16px;border-radius:12px;cursor:pointer;margin-bottom:2px}
+.prof-item:active{background:#202c33}
+.prof-ic{width:26px;height:26px;color:#00a884;flex-shrink:0}
+.prof-ic svg{width:26px;height:26px;stroke-width:2}
+.prof-txt{flex:1;min-width:0}
+.prof-t{font-size:15px;color:#e9edef;font-weight:500}
+.prof-s{font-size:12.5px;color:#8696a0;margin-top:2px}
+.prof-item.dgr .prof-ic{color:#f15c6d}
+.prof-item.dgr .prof-t{color:#f15c6d}
+.prof-footer{text-align:center;padding:30px 16px 40px;font-size:12px;color:#667781;line-height:1.6}
+
+.bnav{background:#111b21;display:flex;border-top:1px solid #202c33;padding-bottom:env(safe-area-inset-bottom,0);flex-shrink:0}
+.bnav-btn{flex:1;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;color:#8696a0;font-size:11px;font-weight:500;position:relative}
+.bnav-btn svg{width:24px;height:24px;stroke-width:2}
+.bnav-btn.on{color:#00a884}
+.bnav-btn.on::before{content:'';position:absolute;top:0;left:26%;right:26%;height:3px;background:#00a884;border-radius:0 0 3px 3px}
+.bnav-badge{position:absolute;top:5px;right:calc(50% - 22px);background:#00a884;color:#fff;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;border:2px solid #111b21}
+
+#toasts{position:fixed;top:calc(20px + env(safe-area-inset-top,0));left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;width:calc(100% - 40px);max-width:420px}
+.toast{padding:13px 18px;border-radius:12px;font-size:14px;font-weight:500;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.5);text-align:center;animation:tsd .3s}
+.toast.ok{background:rgba(0,168,132,.95)}
+.toast.err{background:rgba(234,67,53,.95)}
+.toast.inf{background:rgba(33,150,243,.95)}
+@keyframes tsd{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:8000;display:flex;align-items:center;justify-content:center;padding:22px;animation:fd .18s}
+@keyframes fd{from{opacity:0}to{opacity:1}}
+.modal{background:#202c33;border-radius:16px;padding:24px;max-width:360px;width:100%;animation:mpop .22s}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:14px}
+.modal p{font-size:14px;color:#8696a0;line-height:1.55;margin-bottom:22px}
+.modal input{width:100%;padding:13px 14px;border-radius:11px;background:#111b21;color:#e9edef;font-size:14.5px;border:2px solid transparent;margin-bottom:12px}
+.modal input:focus{border-color:#00a884}
+.modal-av-preview{text-align:center;margin-bottom:16px}
+.modal-av-preview img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:4px solid #111b21;margin:0 auto}
+.modal-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.mbtn{padding:11px 20px;border-radius:9px;font-size:14.5px;font-weight:600;color:#8696a0}
+.mbtn:active{background:#111b21}
+.mbtn.pri{color:#00a884;font-weight:700}
+.mbtn.dgr{color:#f15c6d;font-weight:700}
+
+.emoji-p{position:fixed;bottom:calc(70px + env(safe-area-inset-bottom,0));right:12px;background:#202c33;border-radius:16px;padding:12px;width:300px;max-width:calc(100vw - 24px);box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:7000;max-height:360px;display:flex;flex-direction:column}
+.emoji-list{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;overflow-y:auto;padding-right:4px}
+.emoji-b{aspect-ratio:1;font-size:22px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:all .1s;line-height:1;cursor:pointer}
+.emoji-b:active{background:#111b21;transform:scale(1.15)}
+
+@media(min-width:1024px){#app{max-width:900px;margin:0 auto;height:100vh}}
+</style>
+</head>
+<body>
+
+<div id="load">
+  <div class="ld-logo">H</div>
+  <div class="ld-name">HubKita</div>
+  <div class="ld-spin"></div>
+  <div class="ld-msg" id="ld-msg">Memuat...</div>
+</div>
+
+<div id="auth" class="hide">
+  <div class="ab">
+    <div class="ab-c">H</div>
+    <div class="ab-n">HubKita</div>
+    <div class="ab-t">Chat tanpa batas</div>
+  </div>
+  <div class="ab-box">
+    <div id="s1">
+      <div class="ab-h">Masuk dengan nomor HP</div>
+      <div class="ab-s">Kami akan kirim kode verifikasi. Belum punya akun? Otomatis daftar.</div>
+      <div class="fld">
+        <label>Nomor HP</label>
+        <div class="phone-row">
+          <div class="phone-prefix">+62</div>
+          <input type="tel" id="phone-input" placeholder="81234567890" maxlength="15" inputmode="numeric">
+        </div>
+      </div>
+      <button class="btn-main" id="b-send" onclick="PA.send()">Kirim Kode</button>
+      <div class="amsg" id="m1"></div>
+      <div class="demo-badge">Demo: nomor <b>81234567890</b> · OTP <b>123456</b></div>
+    </div>
+    <div id="s2" class="hide">
+      <div class="ab-h">Masukkan Kode</div>
+      <div class="ab-s">Kode dikirim ke <b id="otp-phone">+62 ...</b></div>
+      <div class="fld">
+        <label>Kode OTP (6 digit)</label>
+        <input type="text" class="otp" id="otp-input" placeholder="000000" maxlength="6" inputmode="numeric">
+      </div>
+      <button class="btn-main" id="b-verify" onclick="PA.verify()">Verifikasi</button>
+      <button class="btn-sec" onclick="PA.resend()">Kirim Ulang</button>
+      <div class="amsg" id="m2"></div>
+      <div class="back-link" onclick="PA.back()">← Ganti nomor</div>
+    </div>
+    <div id="s3" class="hide">
+      <div class="ab-h">Lengkapi Profil</div>
+      <div class="ab-s">Selamat datang! Masukkan nama Anda.</div>
+      <div class="fld">
+        <label>Nama Lengkap</label>
+        <input type="text" id="name-input" placeholder="Budi Santoso" maxlength="50">
+      </div>
+      <button class="btn-main" id="b-save" onclick="PA.saveName()">Mulai Chatting</button>
+      <div class="amsg" id="m3"></div>
+    </div>
+  </div>
+  <div class="auth-info">HubKita v12.0 · WhatsApp Clone<br>Login nomor HP</div>
+</div>
+
+<div id="app">
+  <div class="app-top">
+    <div class="top-t" id="top-t">HubKita</div>
+    <div class="top-actions">
+      <img class="top-av" id="top-av" onclick="App.go('profile')">
+    </div>
+  </div>
+
+  <div class="tv on" id="tv-chats">
+    <div class="search-bar"><input class="search-in" id="search" placeholder="Cari nama atau nomor" oninput="Chats.render()"></div>
+    <div class="list" id="chat-list"></div>
+  </div>
+
+  <div class="tv" id="tv-room">
+    <div class="room-top">
+      <button class="back" onclick="Room.close()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <img class="room-av" id="room-av">
+      <div class="room-hdr">
+        <div class="room-nm" id="room-nm">—</div>
+        <div class="room-st" id="room-st">—</div>
+      </div>
+      <div class="room-actions">
+        <button class="room-btn" title="Telepon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </button>
+        <button class="room-btn" title="Video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="msgs" id="room-msgs"></div>
+    <div class="input-bar">
+      <div class="input-w">
+        <button class="input-btn" onclick="Emoji.toggle(event)" title="Emoji">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </button>
+        <textarea class="input-f" id="room-in" placeholder="Ketik pesan" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();Room.send()}"></textarea>
+      </div>
+      <button class="send-b" onclick="Room.send()" title="Kirim">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="tv" id="tv-profile">
+    <div class="prof">
+      <div class="prof-top">
+        <img class="prof-av" id="pr-av">
+        <div class="prof-nm" id="pr-nm">—</div>
+        <div class="prof-ph" id="pr-ph">—</div>
+        <div class="prof-bio" id="pr-bio"></div>
+      </div>
+      <div class="prof-section">
+        <div class="prof-title">Akun</div>
+        <div class="prof-item" onclick="Profile.edit()">
+          <div class="prof-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+          <div class="prof-txt"><div class="prof-t">Edit Profil</div><div class="prof-s">Nama, bio, foto</div></div>
+        </div>
+        <div class="prof-item" onclick="App.share()">
+          <div class="prof-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+          <div class="prof-txt"><div class="prof-t">Bagikan</div><div class="prof-s">Undang teman</div></div>
+        </div>
+      </div>
+      <div class="prof-section">
+        <div class="prof-title">Lainnya</div>
+        <div class="prof-item" onclick="App.about()">
+          <div class="prof-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+          <div class="prof-txt"><div class="prof-t">Tentang</div><div class="prof-s">HubKita v12.0</div></div>
+        </div>
+        <div class="prof-item dgr" onclick="Profile.logout()">
+          <div class="prof-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+          <div class="prof-txt"><div class="prof-t">Keluar</div><div class="prof-s">Logout akun</div></div>
+        </div>
+      </div>
+      <div class="prof-footer">HubKita v12.0<br><span style="color:#00a884">● Online</span></div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="bnav-btn on" data-go="chats" onclick="App.go('chats')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+      <span>Chat</span>
+    </button>
+    <button class="bnav-btn" data-go="profile" onclick="App.go('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Saya</span>
+    </button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="emoji-picker"></div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+// HUBKITA v12.0 — FULL WHATSAPP CLONE
+// ═══════════════════════════════════════════════════════
+
+var SB_URL = 'https://slevsqmdevfiiemwvtgy.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNsZXZzcW1kZXZmaWllbXd2dGd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNjQ3MDksImV4cCI6MjEwNjc0MDcwOX0.F9kvjLp64gU7u_lqk1q95rm5Wq4VE4zKC9QzZ4IfYmk';
+
+var sb = null, User = null, Profile = null, Active = null, Profiles = [], Previews = {}, Unread = {}, RT = null;
+
+// ─── HELPERS ───
+function $(id){ return document.getElementById(id); }
+function show(id){ $(id).classList.remove('hide'); }
+function hide(id){ $(id).classList.add('hide'); }
+function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':String(s); return d.innerHTML; }
+function ls(m){ $('ld-msg').textContent = m; }
+function toast(m, t){ t = t || 'inf'; var c = $('toasts'); var el = document.createElement('div'); el.className = 'toast ' + t; el.textContent = m; c.appendChild(el); setTimeout(function(){ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(function(){ el.remove(); }, 300); }, 3000); }
+function amsg(id, m, k){ $(id).textContent = m; $(id).className = 'amsg on ' + k; }
+function avatar(n){ var c=['6366f1','ec4899','10b981','f59e0b','8b5cf6','06b6d4','ef4444','84cc16']; var h=0, s=n||'?'; for(var i=0;i<s.length;i++){ h=((h<<5)-h)+s.charCodeAt(i); h|=0; } return 'https://ui-avatars.com/api/?name='+encodeURIComponent(s)+'&background='+c[Math.abs(h)%c.length]+'&color=fff&size=128&bold=true'; }
+function timeAgo(ts){ var d=Date.now()-new Date(ts).getTime(); var s=Math.floor(d/1000); if(s<60)return 'baru'; var m=Math.floor(s/60); if(m<60)return m+'m'; var h=Math.floor(m/60); if(h<24)return h+'j'; return Math.floor(h/24)+'h'; }
+function timeMsg(ts){ try { return new Date(ts).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return ''; } }
+function dayLbl(ts){ var d=new Date(ts),t=new Date(),y=new Date(Date.now()-86400000); if(d.toDateString()===t.toDateString())return 'Hari ini'; if(d.toDateString()===y.toDateString())return 'Kemarin'; return d.toLocaleDateString('id-ID',{day:'numeric',month:'long'}); }
+
+// ─── PHONE AUTH ───
+var PA = {
+  phone: null,
+  send: async function(){
+    var raw = $('phone-input').value.trim().replace(/\D/g,'');
+    if(raw.length < 8){ amsg('m1','Nomor HP minimal 8 digit','err'); return; }
+    if(raw.startsWith('0')) raw = raw.substring(1);
+    var full = '62' + raw;
+    this.phone = full;
+    $('b-send').disabled = true; $('b-send').textContent = 'Mengirim...';
+    try {
+      var r = await sb.auth.signInWithOtp({ phone: '+' + full });
+      if(r.error) throw r.error;
+      $('otp-phone').textContent = '+' + full;
+      hide('s1'); show('s2');
+      setTimeout(function(){ $('otp-input').focus(); }, 200);
+      amsg('m2', 'Demo: masukkan 123456', 'info');
+    } catch(e){
+      amsg('m1', e.message || 'Gagal kirim OTP', 'err');
+    } finally {
+      $('b-send').disabled = false; $('b-send').textContent = 'Kirim Kode';
+    }
+  },
+  verify: async function(){
+    var code = $('otp-input').value.trim();
+    if(code.length !== 6){ amsg('m2','Kode harus 6 digit','err'); return; }
+    $('b-verify').disabled = true; $('b-verify').textContent = 'Memverifikasi...';
+    try {
+      var r = await sb.auth.verifyOtp({ phone: '+' + this.phone, token: code, type: 'sms' });
+      if(r.error) throw r.error;
+      toast('Berhasil masuk!', 'ok');
+    } catch(e){
+      amsg('m2', e.message || 'Kode salah', 'err');
+      $('b-verify').disabled = false; $('b-verify').textContent = 'Verifikasi';
+    }
+  },
+  resend: async function(){
+    try { var r = await sb.auth.signInWithOtp({ phone: '+' + this.phone }); if(r.error) throw r.error; amsg('m2','Kode dikirim ulang','ok'); } catch(e){ amsg('m2', e.message, 'err'); }
+  },
+  back: function(){
+    hide('s2'); hide('s3'); show('s1');
+    $('m1').className = 'amsg'; $('m2').className = 'amsg'; $('m3').className = 'amsg';
+  },
+  saveName: async function(){
+    var nm = $('name-input').value.trim();
+    if(nm.length < 2){ amsg('m3','Nama minimal 2 karakter','err'); return; }
+    $('b-save').disabled = true; $('b-save').textContent = 'Menyimpan...';
+    try {
+      await sb.from('profiles').upsert({
+        id: User.id, name: nm, phone: User.phone, email: User.email || '',
+        avatar: avatar(nm), bio: 'Anggota HubKita',
+        status: 'online', last_seen: new Date().toISOString()
+      });
+      var r = await sb.from('profiles').select('*').eq('id', User.id).single();
+      Profile = r.data;
+      enterAppDone();
+    } catch(e){
+      amsg('m3', e.message, 'err');
+      $('b-save').disabled = false; $('b-save').textContent = 'Mulai Chatting';
+    }
+  }
+};// ─── CHATS LIST ───
+var Chats = {
+  render: function(){
+    var q = ($('search').value || '').toLowerCase();
+    var list = $('chat-list');
+    var filtered = Profiles.filter(function(p){
+      return p.name.toLowerCase().indexOf(q) > -1 || (p.phone || '').indexOf(q) > -1;
+    });
+    if(filtered.length === 0){
+      list.innerHTML = '<div class="empty">' +
+        '<div class="empty-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>' +
+        '<div class="empty-t">Belum ada anggota lain</div>' +
+        '<div class="empty-s">Ajak temanmu buka link ini:<br><b style="color:#00a884">' + esc(location.hostname) + '</b><br>Daftar, lalu mulai chat!</div>' +
+      '</div>';
+      return;
+    }
+    var html = '';
+    filtered.forEach(function(p){
+      var prev = Previews[p.id];
+      var previewText = 'Ketuk untuk mulai chat';
+      var previewTime = '';
+      var previewCheck = '';
+      if(prev){
+        var isMe = prev.sender_id === User.id;
+        previewText = (isMe ? '' : '') + prev.content;
+        previewTime = timeAgo(prev.created_at);
+        if(isMe) previewCheck = '<span class="ch-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/><polyline points="20 12 9 23 4 18" transform="translate(4 -6)"/></svg></span>';
+      }
+      var unread = Unread[p.id] || 0;
+      var online = p.status === 'online';
+      html += '<div class="ch-item" onclick="Room.open(\'' + p.id + '\')">' +
+        '<div class="ch-av-wrap">' +
+          '<img class="ch-av" src="' + esc(p.avatar || avatar(p.name)) + '" onerror="this.src=\'' + avatar(p.name) + '\'">' +
+          '<div class="ch-dot ' + (online ? 'on' : 'off') + '"></div>' +
+        '</div>' +
+        '<div class="ch-body">' +
+          '<div class="ch-name">' + esc(p.name) + '</div>' +
+          '<div class="ch-prev">' + previewCheck + esc(previewText) + '</div>' +
+        '</div>' +
+        '<div class="ch-meta">' +
+          '<div class="ch-time">' + previewTime + '</div>' +
+          (unread > 0 ? '<div class="ch-badge">' + unread + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    });
+    list.innerHTML = html;
+  }
+};
+
+// ─── ROOM ───
+var Room = {
+  open: async function(uid){
+    var p = Profiles.find(function(x){ return x.id === uid; });
+    if(!p) return;
+    Active = p;
+    Unread[p.id] = 0;
+    $('room-av').src = p.avatar || avatar(p.name);
+    $('room-av').onerror = function(){ this.src = avatar(p.name); };
+    $('room-nm').textContent = p.name;
+    $('room-st').innerHTML = (p.status === 'online' ? '<span class="online-dot"></span> Online' : 'Terakhir dilihat ' + timeAgo(p.last_seen || Date.now()));
+    document.querySelectorAll('.tv').forEach(function(el){ el.classList.remove('on'); });
+    $('tv-room').classList.add('on');
+    $('top-t').textContent = p.name;
+    await this.load();
+    setTimeout(function(){ $('room-in').focus(); }, 200);
+    Chats.render();
+  },
+  close: function(){
+    Active = null;
+    App.go('chats');
+  },
+  load: async function(){
+    var box = $('room-msgs');
+    box.innerHTML = '<div style="text-align:center;padding:20px;color:#8696a0;font-size:13px">Memuat...</div>';
+    try {
+      var r = await sb.from('messages').select('*')
+        .or('and(sender_id.eq.' + User.id + ',receiver_id.eq.' + Active.id + '),and(sender_id.eq.' + Active.id + ',receiver_id.eq.' + User.id + ')')
+        .order('created_at', {ascending: true}).limit(300);
+      if(r.error){
+        box.innerHTML = '<div style="text-align:center;padding:20px;color:#f15c6d;font-size:13px">Error: ' + esc(r.error.message) + '</div>';
+        return;
+      }
+      if(!r.data || r.data.length === 0){
+        box.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#8696a0;font-size:13.5px;line-height:1.6">Belum ada pesan.<br>Ketik "Halo!" untuk memulai.</div>';
+        return;
+      }
+      var html = '';
+      var lastDay = '';
+      r.data.forEach(function(m){
+        var day = new Date(m.created_at).toDateString();
+        if(day !== lastDay){
+          lastDay = day;
+          html += '<div class="msg-day">' + dayLbl(m.created_at) + '</div>';
+        }
+        html += Room.renderMsg(m);
+      });
+      box.innerHTML = html;
+      setTimeout(function(){ box.scrollTop = box.scrollHeight; }, 50);
+    } catch(e){
+      box.innerHTML = '<div style="text-align:center;padding:20px;color:#f15c6d;font-size:13px">Error: ' + esc(e.message) + '</div>';
+    }
+  },
+  renderMsg: function(m){
+    var mine = m.sender_id === User.id;
+    var cls = mine ? 'me' : 'oth';
+    var check = mine ? '<span class="msg-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/><polyline points="20 12 9 23 4 18" transform="translate(4 -6)"/></svg></span>' : '';
+    return '<div class="msg ' + cls + '">' + esc(m.content) + '<div class="msg-time">' + timeMsg(m.created_at) + check + '</div></div>';
+  },
+  send: async function(){
+    var inp = $('room-in');
+    var content = inp.value.trim();
+    if(!content || !Active) return;
+    if(content.length > 2000){ toast('Pesan terlalu panjang', 'err'); return; }
+    inp.value = '';
+    inp.style.height = 'auto';
+    var temp = { id: 'temp_' + Date.now(), sender_id: User.id, receiver_id: Active.id, content: content, created_at: new Date().toISOString() };
+    var box = $('room-msgs');
+    var empty = box.querySelector('div[style*="Belum ada pesan"]');
+    if(empty) box.innerHTML = '';
+    box.insertAdjacentHTML('beforeend', Room.renderMsg(temp));
+    box.scrollTop = box.scrollHeight;
+    try {
+      var r = await sb.from('messages').insert({
+        sender_id: User.id, receiver_id: Active.id,
+        sender_name: Profile.name, content: content
+      });
+      if(r.error) throw r.error;
+      loadPreviews().then(function(){ if(!Active) Chats.render(); });
+    } catch(e){
+      console.error(e);
+      toast('Gagal kirim: ' + e.message, 'err');
+    }
+  }
+};
+
+// ─── EMOJI ───
+var Emoji = {
+  list: '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🥳 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤬 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕 🤑 🤠 😈 👿 👹 👺 🤡 💩 👻 💀 ☠️ 👽 👾 🤖 🎃 😺 😸 😹 😻 😼 😽 🙀 😿 😾 👍 👎 👌 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐 🖖 👋 🤝 🙏 💪 🦾 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 💕 💞 💓 💗 💖 💘 💝 💟 ✨ ⭐ 🌟 💫 🔥 💥 💢 💦 💨 🎉 🎊 🎈 🎁 🎂 🎀 🏆 🥇 🥈 🥉 ⚽ 🏀 🏈 ⚾ 🎾 🏐 🏉 🎱 🏓 🏸 🥊 🎯 🎮 🎲 🃏 🎭 🎨 🎬 🎤 🎧 🎵 🎶 🎼 🎹 🥁 🎸 🎺 🎻 📱 💻 ⌨️ 🖥 🖨 🖱 💾 💿 📀 🎥 📷 📸 📹 📼 🔍 🔎 🔮 💰 💵 💴 💶 💷 💸 💳 💎 ⚖️ 🔧 🔨 ⚒ 🛠 ⛏ 🔩 ⚙️ 🔗 ⛓ 🧰 🧲 🔫 💣 🧨 🔪 🗡 ⚔️ 🛡 🚬 ⚰️ ⚱️ 🏺 🔮 📿 🧿 💈 ⚗️ 🔭 🔬 🕳 💊 💉 🩸 🩹 🩺 🌡 🧬 🦠 🧫 🧪 🍕 🍔 🍟 🌭 🍿 🧂 🥓 🥚 🍳 🧇 🥞 🧈 🍞 🥐 🥖 🥨 🧀 🥗 🥙 🌮 🌯 🥪 🍖 🍗 🍤 🍣 🍱 🍛 🍜 🍝 🍠 🍢 🍡 🥟 🥠 🥡 🦪 🍦 🍧 🍨 🍩 🍪 🍰 🧁 🥧 🍫 🍬 🍭 🍮 🍯 🍼 🥛 ☕ 🍵 🧃 🥤 🍶 🍾 🍷 🍸 🍹 🍺 🍻 🥂 🥃 🧋 🧉 🧊 🥄 🍴 🍽 🥢 🥣'.split(' '),
+  toggle: function(e){
+    if(e) e.stopPropagation();
+    var p = document.querySelector('.emoji-p');
+    if(p){ p.remove(); return; }
+    var html = '<div class="emoji-p" onclick="event.stopPropagation()"><div class="emoji-list" id="emoji-list"></div></div>';
+    $('emoji-picker').innerHTML = html;
+    Emoji.render(Emoji.list);
+  },
+  render: function(list){
+    var g = $('emoji-list');
+    if(!g) return;
+    g.innerHTML = list.map(function(e){ return '<button class="emoji-b" onclick="Emoji.pick(\'' + e + '\')">' + e + '</button>'; }).join('');
+  },
+  pick: function(e){
+    var inp = $('room-in');
+    if(inp){
+      var st = inp.selectionStart;
+      inp.value = inp.value.slice(0, st) + e + inp.value.slice(inp.selectionEnd);
+      inp.focus();
+      inp.selectionStart = inp.selectionEnd = st + e.length;
+    }
+    var p = document.querySelector('.emoji-p');
+    if(p) p.remove();
+  }
+};
+
+document.addEventListener('click', function(e){
+  var p = document.querySelector('.emoji-p');
+  if(p && !p.contains(e.target) && !e.target.closest('button[onclick*="Emoji.toggle"]')) p.remove();
+});
+
+// ─── PROFILE ───
+var Profile = {
+  edit: function(){
+    var bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal" onclick="event.stopPropagation()">' +
+      '<h3>Edit Profil</h3>' +
+      '<div class="modal-av-preview"><img id="ed-av-prev" src="' + esc(Profile.avatar || avatar(Profile.name)) + '"></div>' +
+      '<input id="ed-nm" value="' + esc(Profile.name) + '" placeholder="Nama" maxlength="50">' +
+      '<input id="ed-bio" value="' + esc(Profile.bio || '') + '" placeholder="Bio / status" maxlength="100">' +
+      '<input id="ed-av" value="' + esc(Profile.avatar || '') + '" placeholder="URL Foto (opsional)">' +
+      '<div class="modal-acts">' +
+        '<button class="mbtn" data-c>Batal</button>' +
+        '<button class="mbtn pri" data-s>Simpan</button>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(bg);
+    var av = bg.querySelector('#ed-av');
+    av.oninput = function(){ bg.querySelector('#ed-av-prev').src = av.value || avatar(bg.querySelector('#ed-nm').value); };
+    bg.querySelector('#ed-nm').oninput = function(){ if(!av.value) bg.querySelector('#ed-av-prev').src = avatar(this.value); };
+    bg.querySelector('[data-c]').onclick = function(){ bg.remove(); };
+    bg.querySelector('[data-s]').onclick = async function(){
+      var nm = bg.querySelector('#ed-nm').value.trim();
+      var bio = bg.querySelector('#ed-bio').value.trim();
+      var a = bg.querySelector('#ed-av').value.trim() || avatar(nm);
+      if(nm.length < 2){ toast('Nama minimal 2 karakter', 'err'); return; }
+      try {
+        var r = await sb.from('profiles').update({name: nm, bio: bio, avatar: a}).eq('id', User.id);
+        if(r.error) throw r.error;
+        Profile.name = nm; Profile.bio = bio; Profile.avatar = a;
+        bg.remove();
+        App.renderProfile();
+        toast('Profil diperbarui', 'ok');
+      } catch(e){ toast('Gagal: ' + e.message, 'err'); }
+    };
+  },
+  logout: function(){
+    var bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal">' +
+      '<h3>Keluar dari HubKita?</h3>' +
+      '<p>Anda akan logout dari akun ini. Data tetap tersimpan di cloud.</p>' +
+      '<div class="modal-acts">' +
+        '<button class="mbtn" data-c>Batal</button>' +
+        '<button class="mbtn dgr" data-o>Keluar</button>' +
+      '</div>' +
+    '</div>';
+    document.body.appendChild(bg);
+    bg.querySelector('[data-c]').onclick = function(){ bg.remove(); };
+    bg.querySelector('[data-o]').onclick = async function(){
+      bg.remove();
+      try {
+        await sb.from('profiles').update({status: 'offline', last_seen: new Date().toISOString()}).eq('id', User.id);
+        await sb.auth.signOut();
+      } catch(e){}
+      location.reload();
+    };
+  }
+};
+
+// ─── APP ───
+var App = {
+  go: function(tab){
+    document.querySelectorAll('.tv').forEach(function(el){ el.classList.remove('on'); });
+    document.querySelectorAll('.bnav-btn').forEach(function(el){ el.classList.toggle('on', el.dataset.go === tab); });
+    if(tab === 'chats'){ $('tv-chats').classList.add('on'); $('top-t').textContent = 'HubKita'; Chats.render(); }
+    else if(tab === 'profile'){ $('tv-profile').classList.add('on'); $('top-t').textContent = 'Profil Saya'; }
+  },
+  renderProfile: function(){
+    $('top-av').src = Profile.avatar || avatar(Profile.name);
+    $('pr-av').src = Profile.avatar || avatar(Profile.name);
+    $('pr-nm').textContent = Profile.name;
+    $('pr-ph').textContent = Profile.phone ? '+' + Profile.phone : (Profile.email || '');
+    $('pr-bio').textContent = Profile.bio || 'Anggota HubKita';
+  },
+  about: function(){
+    var bg = document.createElement('div');
+    bg.className = 'modal-bg';
+    bg.innerHTML = '<div class="modal">' +
+      '<h3>Tentang HubKita</h3>' +
+      '<p><b>HubKita v12.0</b><br>WhatsApp Clone dengan Supabase<br><br>' +
+      'Fitur:<br>• Login nomor HP + OTP<br>• Chat real-time<br>• Status online<br>• Tanda dibaca<br>• Emoji picker<br>• Multi-device<br>• Cloud sync<br><br>' +
+      'Dibuat dengan HTML, CSS, JS, Supabase</p>' +
+      '<div class="modal-acts"><button class="mbtn pri" data-c>Tutup</button></div>' +
+    '</div>';
+    document.body.appendChild(bg);
+    bg.querySelector('[data-c]').onclick = function(){ bg.remove(); };
+  },
+  share: function(){
+    var url = location.href;
+    if(navigator.share){
+      navigator.share({title: 'HubKita', text: 'Chat dengan saya di HubKita!', url: url}).catch(function(){});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(url).then(function(){ toast('Link disalin', 'ok'); });
+    } else {
+      prompt('Copy link ini:', url);
+    }
+  }
+};
+
+// ─── LOAD & PREVIEWS ───
+async function loadProfiles(){
+  try {
+    var r = await sb.from('profiles').select('*').order('name');
+    Profiles = (r.data || []).filter(function(p){ return p.id !== User.id; });
+    await loadPreviews();
+    Chats.render();
+  } catch(e){
+    console.error(e);
+    toast('Gagal load: ' + e.message, 'err');
+  }
+}
+
+async function loadPreviews(){
+  Previews = {};
+  for(var i = 0; i < Profiles.length; i++){
+    var p = Profiles[i];
+    try {
+      var r = await sb.from('messages').select('*')
+        .or('and(sender_id.eq.' + User.id + ',receiver_id.eq.' + p.id + '),and(sender_id.eq.' + p.id + ',receiver_id.eq.' + User.id + ')')
+        .order('created_at', {ascending: false}).limit(1);
+      if(r.data && r.data[0]) Previews[p.id] = r.data[0];
+    } catch(e){}
+  }
+}
+
+// ─── REALTIME ───
+function subscribeRealtime(){
+  if(RT){ try { sb.removeChannel(RT); } catch(e){} }
+  RT = sb.channel('rt_' + User.id)
+    .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'messages'}, function(payload){
+      var m = payload.new;
+      if(!m) return;
+      if(Active && m.sender_id === Active.id && m.receiver_id === User.id){
+        var box = $('room-msgs');
+        var empty = box.querySelector('div[style*="Belum ada pesan"]');
+        if(empty) box.innerHTML = '';
+        box.insertAdjacentHTML('beforeend', Room.renderMsg(m));
+        setTimeout(function(){ box.scrollTop = box.scrollHeight; }, 30);
+        Unread[Active.id] = 0;
+      } else if(m.receiver_id === User.id){
+        Unread[m.sender_id] = (Unread[m.sender_id] || 0) + 1;
+      }
+      loadPreviews().then(function(){ if(!Active) Chats.render(); });
+    })
+    .on('postgres_changes', {event: 'UPDATE', schema: 'public', table: 'profiles'}, function(payload){
+      var p = payload.new;
+      if(!p) return;
+      var idx = Profiles.findIndex(function(x){ return x.id === p.id; });
+      if(idx > -1) Profiles[idx] = p;
+      if(Active && Active.id === p.id){
+        Active = p;
+        $('room-st').innerHTML = (p.status === 'online' ? '<span class="online-dot"></span> Online' : 'Terakhir dilihat ' + timeAgo(p.last_seen || Date.now()));
+      }
+      if(!Active) Chats.render();
+    })
+    .subscribe();
+}
+
+// ─── ENTER APP ───
+async function enterAppDone(){
+  $('load').classList.add('out');
+  hide('auth');
+  show('app');
+  $('app').classList.add('on');
+  App.renderProfile();
+  await loadProfiles();
+  subscribeRealtime();
+  window.addEventListener('beforeunload', function(){
+    if(User && sb){
+      sb.from('profiles').update({status: 'offline', last_seen: new Date().toISOString()}).eq('id', User.id);
+    }
+  });
+  setInterval(function(){
+    if(!Active){
+      sb.from('profiles').select('*').then(function(r){
+        if(r.data){
+          Profiles = r.data.filter(function(p){ return p.id !== User.id; });
+          Chats.render();
+        }
+      });
+    }
+  }, 30000);
+}
+
+// ─── BOOT ───
+async function boot(){
+  ls('Menghubungkan...');
+  if(!window.supabase){
+    setTimeout(function(){ $('load').classList.add('out'); show('auth'); }, 500);
+    return;
+  }
+  try { sb = window.supabase.createClient(SB_URL, SB_KEY); } catch(e){
+    setTimeout(function(){ $('load').classList.add('out'); show('auth'); }, 500);
+    return;
+  }
+  var timeout = setTimeout(function(){
+    $('load').classList.add('out');
+    show('auth');
+  }, 5000);
+  try {
+    ls('Memeriksa sesi...');
+    var res = await sb.auth.getSession();
+    clearTimeout(timeout);
+    if(res.data.session && res.data.session.user){
+      User = res.data.session.user;
+      // Cek profile
+      var r = await sb.from('profiles').select('*').eq('id', User.id).maybeSingle();
+      if(r.data && r.data.name){
+        Profile = r.data;
+        await sb.from('profiles').update({status: 'online', last_seen: new Date().toISOString()}).eq('id', User.id);
+        Profile.status = 'online';
+        enterAppDone();
+      } else {
+        // User baru — minta nama
+        $('load').classList.add('out');
+        show('auth');
+        hide('s1'); hide('s2'); show('s3');
+        setTimeout(function(){ $('name-input').focus(); }, 200);
+      }
+    } else {
+      $('load').classList.add('out');
+      show('auth');
+    }
+  } catch(e){
+    clearTimeout(timeout);
+    console.error(e);
+    $('load').classList.add('out');
+    show('auth');
+  }
+  sb.auth.onAuthStateChange(async function(event, session){
+    console.log('[AUTH]', event);
+    if(event === 'SIGNED_IN' && session && session.user && !User){
+      User = session.user;
+      var r = await sb.from('profiles').select('*').eq('id', User.id).maybeSingle();
+      if(r.data && r.data.name){
+        Profile = r.data;
+        await sb.from('profiles').update({status: 'online', last_seen: new Date().toISOString()}).eq('id', User.id);
+        Profile.status = 'online';
+        enterAppDone();
+      } else {
+        hide('s1'); hide('s2'); show('s3');
+        setTimeout(function(){ $('name-input').focus(); }, 200);
+      }
+    } else if(event === 'SIGNED_OUT'){
+      User = null; Profile = null;
+      $('app').classList.remove('on');
+      show('auth');
+    }
+  });
+}
+
+// Auto-grow textarea
+var ri = $('room-in');
+if(ri){
+  ri.addEventListener('input', function(){
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+}
+
+// Start
+boot();
+console.log('%c🚀 HubKita v12.0 — WhatsApp Clone','background:linear-gradient(135deg,#00a884,#075e54);color:white;padding:10px 20px;border-radius:8px;font-weight:700;font-size:16px');
+</script>
+</body>
+</html>
